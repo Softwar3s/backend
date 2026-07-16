@@ -1,9 +1,12 @@
-import { Hono } from 'hono'
+import env from "./lib/env";
+import { Hono } from "hono";
+import mainRoutes from "./routes";
 
-const app = new Hono()
+const app = new Hono();
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+app.route("/", mainRoutes);
 
-export default app
+export default {
+  fetch: app.fetch,
+  port: env.PORT,
+};
