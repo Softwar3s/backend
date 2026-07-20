@@ -15,6 +15,12 @@ const envSchema = z.object({
   DATABASE_URL: z.url("DATABASE_URL must be a valid URL"),
   GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
   GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
+  RESEND_API_KEY: z.string().optional().default(""),
+  FROM_EMAIL: z.string().email().default("onboarding@resend.dev"),
+  FRONTEND_URL: z.url().default("http://localhost:3000"),
+  POLAR_ACCESS_TOKEN: z.string().optional().default(""),
+  POLAR_WEBHOOK_SECRET: z.string().optional().default(""),
+  POLAR_SERVER: z.enum(["sandbox", "production"]).optional().default("sandbox"),
 });
 
 export default envSchema.parse(process.env);
