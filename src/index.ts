@@ -2,6 +2,7 @@ import env from "./lib/env";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import mainRoutes from "./routes";
+import { startScheduler } from "./scheduler";
 
 const app = new Hono();
 
@@ -13,6 +14,8 @@ app.use("*", cors({
 }));
 
 app.route("/", mainRoutes);
+
+startScheduler();
 
 export default {
   fetch: app.fetch,

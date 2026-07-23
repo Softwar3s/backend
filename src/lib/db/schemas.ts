@@ -200,6 +200,8 @@ export const giveaway = pgTable(
     endTime: timestamp("end_time", { withTimezone: true }).notNull(),
     timezone: text("timezone").notNull().default("UTC"),
     status: text("status").notNull().default("draft"), // draft | active | ended
+    winnerId: text("winner_id")
+      .references(() => giveawayEntry.id, { onDelete: "set null" }),
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
@@ -311,6 +313,7 @@ export const relations = defineRelations(
     giveaway: {
       organization: r.one.organization({ from: r.giveaway.organizationId, to: r.organization.id }),
       entries: r.many.giveawayEntry({ from: r.giveaway.id, to: r.giveawayEntry.giveawayId }),
+      winner: r.one.giveawayEntry({ from: r.giveaway.winnerId, to: r.giveawayEntry.id }),
     },
     giveawayEntry: {
       giveaway: r.one.giveaway({ from: r.giveawayEntry.giveawayId, to: r.giveaway.id }),

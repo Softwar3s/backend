@@ -1,0 +1,2 @@
+ALTER TABLE "giveaway" ADD COLUMN "winner_id" text;--> statement-breakpoint
+ALTER TABLE "giveaway" ADD CONSTRAINT "giveaway_winner_id_giveaway_entry_id_fkey" FOREIGN KEY ("winner_id") REFERENCES "giveaway_entry"("id") ON DELETE SET NULL;
