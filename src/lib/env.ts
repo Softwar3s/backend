@@ -21,6 +21,11 @@ const envSchema = z.object({
   POLAR_ACCESS_TOKEN: z.string().optional().default(""),
   POLAR_WEBHOOK_SECRET: z.string().optional().default(""),
   POLAR_SERVER: z.enum(["sandbox", "production"]).optional().default("sandbox"),
+  CLOUDFLARE_R2_ACCOUNT_ID: z.string().optional().default(""),
+  CLOUDFLARE_R2_ACCESS_KEY_ID: z.string().optional().default(""),
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY: z.string().optional().default(""),
+  CLOUDFLARE_R2_BUCKET_NAME: z.string().optional().default(""),
+  CLOUDFLARE_R2_PUBLIC_URL: z.string().optional().default(""),
 });
 
 export default envSchema.parse(process.env);

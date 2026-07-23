@@ -1,3 +1,10 @@
+/**
+ * Session-based auth middlewares using Better Auth.
+ *
+ * attachSession – attaches user/session to context if available (non-blocking)
+ * requireAuth   – returns 401 if not authenticated (blocking)
+ */
+
 import auth from "../lib/auth";
 import { createMiddleware } from "hono/factory";
 
@@ -6,6 +13,7 @@ export type AuthVariables = {
   session: typeof auth.$Infer.Session.session | null;
 };
 
+/** Attaches user + session to context. Does NOT block unauthenticated requests. */
 export const attachSession = createMiddleware<{ Variables: AuthVariables }>(
   async (c, next) => {
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
@@ -22,6 +30,7 @@ export const attachSession = createMiddleware<{ Variables: AuthVariables }>(
   },
 );
 
+/** Blocks unauthenticated requests with a 401 response. */
 export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(
   async (c, next) => {
     const session = await auth.api.getSession({ headers: c.req.raw.headers });

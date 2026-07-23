@@ -6,8 +6,8 @@ import mainRoutes from "./routes";
 const app = new Hono();
 
 app.use("*", cors({
-  origin: [process.env.FRONTEND_URL || "http://localhost:3000"],
-  allowHeaders: ["Content-Type", "Authorization"],
+  origin: (origin) => origin || "",
+  allowHeaders: ["Content-Type", "Authorization", "x-api-key"],
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
 }));
