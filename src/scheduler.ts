@@ -1,5 +1,6 @@
+import * as crypto from "node:crypto";
 import db from "./lib/db";
-import { giveaway, giveawayEntry } from "./lib/db/schemas";
+import { giveaway, giveawayEntry, giveawayWinner } from "./lib/db/schemas";
 import { and, eq, lte, sql } from "drizzle-orm";
 
 const POLL_INTERVAL = 30_000;
@@ -12,26 +13,38 @@ export function startScheduler() {
   const poll = async () => {
     try {
       const expired = await db
-        .select({ id: giveaway.id, name: giveaway.name })
+        .select({ id: giveaway.id, name: giveaway.name, winnersCount: giveaway.winnersCount })
         .from(giveaway)
         .where(and(eq(giveaway.status, "active"), lte(giveaway.endTime, new Date())));
 
       if (expired.length === 0) return;
 
       for (const g of expired) {
-        const [winner] = await db
+        const winners = await db
           .select({ id: giveawayEntry.id })
           .from(giveawayEntry)
           .where(eq(giveawayEntry.giveawayId, g.id))
-          .orderBy(sql`RANDOM()`)
-          .limit(1);
+          .orderBy(sql`RANDOM() ^ (1.0 / NULLIF(${giveawayEntry.tickets}, 0)) DESC`)
+          .limit(g.winnersCount);
+
+        if (winners.length > 0) {
+          await db.insert(giveawayWinner).values(
+            winners.map((w, i) => ({
+              id: crypto.randomUUID(),
+              giveawayId: g.id,
+              entryId: w.id,
+              position: i + 1,
+            })),
+          );
+        }
 
         await db
           .update(giveaway)
-          .set({ status: "ended", winnerId: winner?.id ?? null })
+          .set({ status: "ended" })
           .where(eq(giveaway.id, g.id));
 
-        console.log(`[scheduler] Ended "${g.name}"${winner ? `, winner: ${winner.id}` : " (no entries)"}`);
+        const winnerList = winners.map((w, i) => `#${i + 1}: ${w.id}`).join(", ");
+        console.log(`[scheduler] Ended "${g.name}"${winnerList ? `, winners: ${winnerList}` : " (no entries)"}`);
       }
     } catch (err) {
       console.error("[scheduler] Failed to end expired giveaways:", err);

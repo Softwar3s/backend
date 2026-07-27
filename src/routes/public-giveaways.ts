@@ -107,6 +107,7 @@ publicRoutes.post("/public/giveaways/:slug/enter", requireApiKey, async (c) => {
       giveawayId: g.id,
       name,
       email,
+      tickets: 1,
     })
     .returning()
 

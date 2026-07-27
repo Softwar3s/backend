@@ -123,6 +123,7 @@ publicPageRoutes.post("/page/:slug/enter", async (c) => {
       giveawayId: g.id,
       name,
       email,
+      tickets: 1,
     })
     .returning()
 

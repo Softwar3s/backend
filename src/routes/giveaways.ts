@@ -14,10 +14,10 @@
  */
 
 import { Hono } from "hono"
-import { eq, and, desc } from "drizzle-orm"
+import { eq, and, asc, desc } from "drizzle-orm"
 import * as crypto from "node:crypto"
 import db from "../lib/db"
-import { giveaway, giveawayEntry, member } from "../lib/db/schemas"
+import { giveaway, giveawayEntry, giveawayWinner, member } from "../lib/db/schemas"
 import { requireAuth, type AuthVariables } from "../middlewares/auth"
 
 const giveawaysRoutes = new Hono<{ Variables: AuthVariables }>()
@@ -121,7 +121,7 @@ giveawaysRoutes.post("/giveaways", requireAuth, async (c) => {
   if (typeof orgId !== "string") return orgId
 
   const body = await c.req.json()
-  const { name, slug, description, image, endTime, timezone } = body
+  const { name, slug, description, image, endTime, timezone, winnersCount } = body
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return c.json({ error: "Name is required" }, 400)
@@ -155,6 +155,7 @@ giveawaysRoutes.post("/giveaways", requireAuth, async (c) => {
       endTime: new Date(endTime),
       timezone: timezone || "UTC",
       status: "draft",
+      winnersCount: typeof winnersCount === "number" ? winnersCount : 1,
       organizationId: orgId,
     })
     .returning()
@@ -186,6 +187,7 @@ giveawaysRoutes.put("/giveaways/:id", requireAuth, async (c) => {
   if (body.endTime !== undefined) updates.endTime = new Date(body.endTime)
   if (body.timezone !== undefined) updates.timezone = body.timezone
   if (body.status !== undefined) updates.status = body.status
+  if (body.winnersCount !== undefined) updates.winnersCount = body.winnersCount
 
   const [updated] = await db
     .update(giveaway)
@@ -235,6 +237,37 @@ giveawaysRoutes.get("/giveaways/:id/entries", requireAuth, async (c) => {
     .orderBy(desc(giveawayEntry.createdAt))
 
   return c.json({ entries, total: entries.length })
+})
+
+/** GET /api/giveaways/:id/winners – list winners for a giveaway by position */
+giveawaysRoutes.get("/giveaways/:id/winners", requireAuth, async (c) => {
+  const orgId = await requireOrgMember(c)
+  if (typeof orgId !== "string") return orgId
+
+  const id = c.req.param("id")
+  const [g] = await db
+    .select({ id: giveaway.id })
+    .from(giveaway)
+    .where(and(eq(giveaway.id, id), eq(giveaway.organizationId, orgId)))
+    .limit(1)
+
+  if (!g) return c.json({ error: "Giveaway not found" }, 404)
+
+  const winners = await db
+    .select({
+      id: giveawayWinner.id,
+      position: giveawayWinner.position,
+      name: giveawayEntry.name,
+      email: giveawayEntry.email,
+      tickets: giveawayEntry.tickets,
+      createdAt: giveawayWinner.createdAt,
+    })
+    .from(giveawayWinner)
+    .innerJoin(giveawayEntry, eq(giveawayWinner.entryId, giveawayEntry.id))
+    .where(eq(giveawayWinner.giveawayId, id))
+    .orderBy(asc(giveawayWinner.position))
+
+  return c.json({ winners })
 })
 
 export default giveawaysRoutes

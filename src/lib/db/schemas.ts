@@ -200,8 +200,7 @@ export const giveaway = pgTable(
     endTime: timestamp("end_time", { withTimezone: true }).notNull(),
     timezone: text("timezone").notNull().default("UTC"),
     status: text("status").notNull().default("draft"), // draft | active | ended
-    winnerId: text("winner_id")
-      .references(() => giveawayEntry.id, { onDelete: "set null" }),
+    winnersCount: integer("winners_count").notNull().default(1),
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
@@ -217,7 +216,7 @@ export const giveaway = pgTable(
   ],
 )
 
-/** A single entry (name + email) submitted to a giveaway */
+/** A single entry (name + email + tickets) submitted to a giveaway */
 export const giveawayEntry = pgTable(
   "giveaway_entry",
   {
@@ -227,10 +226,30 @@ export const giveawayEntry = pgTable(
       .references(() => giveaway.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     email: text("email").notNull(),
+    tickets: integer("tickets").notNull().default(1),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
     index("giveaway_entry_giveawayId_idx").on(table.giveawayId),
+  ],
+)
+
+/** A winner selected from entries of a giveaway */
+export const giveawayWinner = pgTable(
+  "giveaway_winner",
+  {
+    id: text("id").primaryKey(),
+    giveawayId: text("giveaway_id")
+      .notNull()
+      .references(() => giveaway.id, { onDelete: "cascade" }),
+    entryId: text("entry_id")
+      .notNull()
+      .references(() => giveawayEntry.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("giveaway_winner_giveawayId_idx").on(table.giveawayId),
   ],
 )
 
@@ -267,6 +286,16 @@ export const giveawayPage = pgTable(
   ],
 )
 
+/* ── Presence tracking ─────────────────────────────────────────── */
+
+/** Tracks user online status via heartbeat */
+export const userPresence = pgTable("user_presence", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+})
+
 /* ── Relations ────────────────────────────────────────────────── */
 
 export const relations = defineRelations(
@@ -280,6 +309,8 @@ export const relations = defineRelations(
     invitation,
     giveaway,
     giveawayEntry,
+    giveawayWinner,
+    userPresence,
     giveawayPage,
   },
   (r) => ({
@@ -288,6 +319,7 @@ export const relations = defineRelations(
       accounts: r.many.account({ from: r.user.id, to: r.account.userId }),
       members: r.many.member({ from: r.user.id, to: r.member.userId }),
       invitations: r.many.invitation({ from: r.user.id, to: r.invitation.inviterId }),
+      presence: r.one.userPresence({ from: r.user.id, to: r.userPresence.userId }),
     },
     session: {
       user: r.one.user({ from: r.session.userId, to: r.user.id }),
@@ -313,13 +345,20 @@ export const relations = defineRelations(
     giveaway: {
       organization: r.one.organization({ from: r.giveaway.organizationId, to: r.organization.id }),
       entries: r.many.giveawayEntry({ from: r.giveaway.id, to: r.giveawayEntry.giveawayId }),
-      winner: r.one.giveawayEntry({ from: r.giveaway.winnerId, to: r.giveawayEntry.id }),
+      winners: r.many.giveawayWinner({ from: r.giveaway.id, to: r.giveawayWinner.giveawayId }),
     },
     giveawayEntry: {
       giveaway: r.one.giveaway({ from: r.giveawayEntry.giveawayId, to: r.giveaway.id }),
     },
+    giveawayWinner: {
+      giveaway: r.one.giveaway({ from: r.giveawayWinner.giveawayId, to: r.giveaway.id }),
+      entry: r.one.giveawayEntry({ from: r.giveawayWinner.entryId, to: r.giveawayEntry.id }),
+    },
     giveawayPage: {
       organization: r.one.organization({ from: r.giveawayPage.organizationId, to: r.organization.id }),
+    },
+    userPresence: {
+      user: r.one.user({ from: r.userPresence.userId, to: r.user.id }),
     },
   }),
 );

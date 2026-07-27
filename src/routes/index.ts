@@ -15,6 +15,7 @@ import publicGiveawaysRoutes from "./public-giveaways";
 import publicPageRoutes from "./public-page";
 import pagesRoutes from "./pages";
 import uploadRoutes from "./upload";
+import presenceRoutes from "./presence";
 import type { AuthVariables } from "../middlewares/auth";
 
 const mainRoutes = new Hono<{ Variables: AuthVariables }>();
@@ -26,5 +27,6 @@ mainRoutes.route("/api", pagesRoutes);
 mainRoutes.route("/api", uploadRoutes);
 mainRoutes.route("/api", publicGiveawaysRoutes);
 mainRoutes.route("/api", publicPageRoutes);
+mainRoutes.route("/api", presenceRoutes);
 
 export default mainRoutes;

@@ -1,0 +1,1 @@
+ALTER TABLE "giveaway_entry" ADD COLUMN "tickets" integer DEFAULT 1 NOT NULL;
